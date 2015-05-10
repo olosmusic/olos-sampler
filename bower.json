@@ -1,0 +1,13 @@
+{
+  "name": "olos-sampler",
+  "version": "0.0.0",
+  "license": "MIT",  
+  "main": "olos-sampler.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.5.5",
+    "olos-soundfile": "olosmusic/olos-soundfile#master"
+  },
+  "devDependencies": {
+    "web-component-tester": "Polymer/web-component-tester#^2.2.4"
+  }
+}

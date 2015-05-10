@@ -1,0 +1,119 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../olos-soundfile/olos-soundfile.html">
+<!-- <link rel="import" href="../font-roboto/roboto.html"> -->
+
+<!--
+olos-sampler
+##### Example
+
+
+@element olos-sampler
+@blurb 
+@status alpha
+@homepage 
+-->
+<polymer-element name="olos-sampler" attributes="rateParam output width height color src">
+  <template>
+    <link rel="stylesheet" href="olos-sampler.css"></link>
+
+    <div style="height:100%" id="olos-container">
+
+      <olos-soundfile></olos-soundfile>
+      <olos-soundfile></olos-soundfile>
+      <olos-soundfile></olos-soundfile>
+      <olos-soundfile></olos-soundfile>
+      <olos-soundfile></olos-soundfile>
+
+    </div>
+
+  </template>
+  <script>
+    (function(params){
+
+      Polymer('olos-sampler', {
+
+        /**
+         * Width of module
+         * @property width
+         * @type {Number}
+         */
+        // width: 200,
+        /**
+         * Height
+         * @property height
+         * @type {Number}
+         */
+        // height: 40,
+
+        /**
+         *  Is the sampler playing? 
+         *  @property playing
+         *  @type Boolean
+         *  @default false
+         */
+        playing: false,
+
+        // inputs and outputs
+        output: null,
+
+        // publicMethods: ['settings', 'setupRateSlider'],
+
+        rootfolder: '../olos-sampler/',
+
+        // array of soundfiles
+        soundfiles: [],
+        canvasDivs: [],
+
+        ready: function() {
+
+        },
+
+        domReady: function() {
+          var self = this;
+          self._setupCanvases();
+        },
+
+        _setupCanvases: function() {
+          this.soundfiles = this.shadowRoot.querySelectorAll('olos-soundfile');
+          this.canvasDivs = [];
+
+          // add each soundfile canvas to the page
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i].$.controls.hidden = true;
+          }
+
+        },
+
+        _draw: function() {
+          // tell all soundfiles to draw
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i]._draw();
+          }
+        },
+
+        // dispose
+        dispose: function() {
+          // dispose of all soundfiles
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i].dispose();
+          }
+        },
+
+        resize: function(e) {
+
+          var w  = this.getBoundingClientRect().width;
+          var h = this.getBoundingClientRect().height/this.soundfiles.length - 2.5;
+
+          // // resize all olos-soundfiles
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i]._p5.resizeCanvas(w,h);
+          }
+
+        },
+
+      });
+
+    })();
+  </script>
+
+</polymer-element>
