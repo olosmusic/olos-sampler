@@ -1,5 +1,18 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../olos-soundfile/olos-soundfile.html">
+<link rel="import" href="../olos-envelope/olos-envelope.html">
+
+<link rel="import" href="../olos-param/olos-param.html">
+
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../paper-dropdown/paper-dropdown.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../core-menu/core-menu.html">
+<link rel="import" href="../core-input/core-input.html">
+
+
 <!-- <link rel="import" href="../font-roboto/roboto.html"> -->
 
 <!--
@@ -12,17 +25,34 @@ olos-sampler
 @status alpha
 @homepage 
 -->
-<polymer-element name="olos-sampler" attributes="rateParam output width height color src">
+<polymer-element name="olos-sampler" attributes="triggerParam output width height color src">
   <template>
     <link rel="stylesheet" href="olos-sampler.css"></link>
 
+    <paper-dropdown-menu label="Sample Packs" on-click="{{buffersChanged}}">
+      <core-dropdown class="dropdown constrained-height">
+        <core-menu>
+
+          <template repeat="{{pack in samplePackKeys}}">
+            <core-item on-click="{{toggleSamplePack}}">{{pack}}</core-item>
+          </template>
+
+        </core-menu>
+
+      </core-dropdown>
+    </paper-dropdown-menu>
+
+    <label>Pitch: </label>
+    <input type="number" is="core-input" id="pitch" min="-12" max="12" step="1"value="{{pitch}}" style="width:40px"></input>
+
+
     <div style="height:100%" id="olos-container">
 
-      <olos-soundfile></olos-soundfile>
-      <olos-soundfile></olos-soundfile>
-      <olos-soundfile></olos-soundfile>
-      <olos-soundfile></olos-soundfile>
-      <olos-soundfile></olos-soundfile>
+      <template repeat="{{s in samples}}">
+        <olos-soundfile src="{{s}}"></olos-soundfile>
+      </template>
+
+      <olos-param id="triggerParam"></olos-param>
 
     </div>
 
@@ -33,56 +63,206 @@ olos-sampler
       Polymer('olos-sampler', {
 
         /**
-         * Width of module
-         * @property width
-         * @type {Number}
+         *  triggerParam contains the input data passed by another module.
+         *  
+         *  @property triggerParam
+         *  @type Object
+         *  @default ''
          */
-        // width: 200,
-        /**
-         * Height
-         * @property height
-         * @type {Number}
-         */
-        // height: 40,
+        triggerParam: null,
 
         /**
-         *  Is the sampler playing? 
-         *  @property playing
-         *  @type Boolean
-         *  @default false
+         *  Output GainNode
+         *
+         *  @property output
+         *  @type GainNode
          */
-        playing: false,
-
-        // inputs and outputs
         output: null,
 
-        // publicMethods: ['settings', 'setupRateSlider'],
+        /**
+         *  pitch-shift, which is converted to playback rate, relative to zero (root)
+         *
+         *  @property pitch
+         *  @type Number
+         *  @default 0
+         */
+        pitch: 0,
+
+        samplePackKeys: [],
+
+        samplePacks: {
+
+          'drums' : ['../_audio/tom_01.mp3', '../_audio/triangle_01.mp3', '../_audio/triangle_03.mp3', '../_audio/707/Snare-707.mp3', '../_audio/707/Kick-707.mp3'],
+
+          'watery' : ['../_audio/watery/water_droplet_2.mp3', '../_audio/watery/water_droplet_3.mp3', '../_audio/watery/waterbowl1.mp3','../_audio/watery/waterbowl2.mp3','../_audio/watery/waterbottle1.mp3'],
+
+          'meloding' : ['../_audio/marimba/C3.mp3', '../_audio/whistle.mp3', '../_audio/flute.mp3', '../_audio/doorbell.mp3', '../_audio/dink_04.mp3'],
+
+          'lissaJ' : ['../_audio/design/json1.mp3', '../_audio/design/json2.mp3', '../_audio/Lissajous_Samples/Loops/Boops.mp3', '../_audio/Lissajous_Samples/Loops/Chords.mp3', '../_audio/Lissajous_Samples/Loops/Pad.mp3'],
+
+          'vocal' : ['../_audio/vocal/badabap1.mp3', '../_audio/vocal/badabap5.mp3', '../_audio/vocal/bv4.mp3', '../_audio/vocal/heynowmidh1.mp3', '../_audio/vocal/op051.mp3']
+
+        },
+
+        // determines how many soundfiles there are
+        samples: ['../_audio/tom_01.mp3', '../_audio/triangle_01.mp3', '../_audio/triangle_03.mp3', '../_audio/707/Snare-707.mp3', '../_audio/707/Kick-707.mp3'],
+
 
         rootfolder: '../olos-sampler/',
 
-        // array of soundfiles
+        publicMethods: ['pitchOffsets', 'settings'],
+
+        /**
+         *  An Array of olos-soundfiles
+         *  
+         *  @property soundfiles
+         *  @type {Array}
+         */
         soundfiles: [],
         canvasDivs: [],
 
         ready: function() {
+          this.output = audioContext.createGain();
 
+          this.samplePackKeys = Object.keys(this.samplePacks);
         },
 
         domReady: function() {
           var self = this;
           self._setupCanvases();
+          self._initParams();
+        },
+
+        _initParams: function() {
+          var self = this;
+
+          self.triggerParam = self.$.triggerParam;
+          self.triggerParam.scope = self;
+          self.triggerParam.callback = self.onData;
         },
 
         _setupCanvases: function() {
-          this.soundfiles = this.shadowRoot.querySelectorAll('olos-soundfile');
+          var nodeList = this.shadowRoot.querySelectorAll('olos-soundfile');
+          
+          console.log('node list' + nodeList);
+
+          var soundfiles = []; // Will hold the array
+          for(var i = 0, ll = nodeList.length; i != ll; soundfiles.push(nodeList[i++]));
+
+          this.soundfiles = soundfiles;
+          soundfiles.reverse();
+
           this.canvasDivs = [];
 
           // add each soundfile canvas to the page
           for (var i = 0; i < this.soundfiles.length; i++) {
             this.soundfiles[i].$.controls.hidden = true;
+            this.soundfiles[i].output.connect(this.output);
+
+            this.soundfiles[i].pitchOffset = 0;
           }
 
         },
+
+        toggleSamplePack: function(e, select, target) {
+          var samplePackName = target.innerHTML;
+          this.samples = this.samplePacks[samplePackName];
+        },
+
+        samplesChanged: function() {
+          var self = this;
+
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            try {
+              this.soundfiles[i].dispose();
+            } catch(e) {
+              throw e;
+            }
+          }
+
+          self.soundfiles = [];
+          self.canvasDivs = [];
+
+          setTimeout( function() {
+            self._setupCanvases()
+          }, 100);
+        },
+
+        /**
+         *  A method to play with settings.
+         *
+         *  @method settings
+         *  @param {Number} this.pitch change all soundfile playback rates
+         *                             by a pitch ratio
+         */
+        settings: function() {
+          // this.pitch = 0;
+          // this.reverseBuffers();
+        },
+
+        /**
+         *  Change individual pitch offsets.
+         *
+         *  @method pitchOffset
+         */
+        pitchOffsets: function() {
+          // change individual soundfile pitch offset
+          this.soundfiles[0].pitchOffset = -12;
+        },
+
+        pitchOffsetsChanged: function() {
+          this.pitchChanged();
+        },
+
+        pitchChanged: function() {
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i].pitch = this.pitch + this.soundfiles[i].pitchOffset;
+          }
+        },
+
+        /**
+         *  reverse all of the buffers
+         *
+         *  @method reverseBuffers
+         */
+        reverseBuffers: function() {
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            this.soundfiles[i].reverseBuffer();
+          }
+        },
+
+        /**
+         *  This event fires when new data is received.
+         *
+         *  @method onData
+         *  @param  Array value an array of values
+         *  @param  Number time audioContext time
+         */
+        onData: function(value, time) {
+          for (var i = 0; i < value.length; i++) {
+            if (value[i] > 0) {
+
+              // make a fade in and out if there is a selection
+              var cueStart = this.soundfiles[i].cueStart;
+              var cueDur = this.soundfiles[i].cueDur;
+
+              // if (cueStart) {
+              //   this.soundfiles[i].output.gain.cancelScheduledValues(time + 0);
+              //   this.soundfiles[i].output.gain.setValueAtTime(this.soundfiles[i].output.gain.value, time);
+              //   this.soundfiles[i].output.gain.linearRampToValueAtTime(0, time + 0.0001);
+              //   this.soundfiles[i].output.gain.exponentialRampToValueAtTime(1, time + 0.01);
+              // }
+              // if (cueDur) {
+              //   this.soundfiles[i].output.gain.setTargetAtTime(0, cueDur + time - 0.1, 0.5);
+              // }
+
+              this.soundfiles[i].start(time - audioContext.currentTime);
+
+
+            }
+          }
+        },
+
 
         _draw: function() {
           // tell all soundfiles to draw
@@ -109,7 +289,7 @@ olos-sampler
             this.soundfiles[i]._p5.resizeCanvas(w,h);
           }
 
-        },
+        }
 
       });
 
