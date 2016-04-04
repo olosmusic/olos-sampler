@@ -6,188 +6,279 @@
 
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
-<link rel="import" href="../paper-dropdown/paper-dropdown.html">
+<link rel="import" href="../iron-dropdown/iron-dropdown.html">
+<link rel="import" href="../paper-menu/paper-menu.html">
 <link rel="import" href="../paper-item/paper-item.html">
+
 <link rel="import" href="../paper-input/paper-input.html">
-<link rel="import" href="../core-menu/core-menu.html">
-<link rel="import" href="../core-input/core-input.html">
+<link rel="import" href="../iron-input/iron-input.html">
 
-
-<!-- <link rel="import" href="../font-roboto/roboto.html"> -->
 
 <!--
 olos-sampler
-##### Example
 
+A sampler that contains 5 olos-soundfiles.
+
+Trigger samples with the olos-matrix.
+
+Access individual olos-soundfiles from the <code>soundfiles</code> array.
 
 @element olos-sampler
 @blurb 
 @status alpha
 @homepage 
 -->
-<polymer-element name="olos-sampler" attributes="triggerParam output width height color src">
+<dom-module id="olos-sampler">
+  <link rel="import" type="css" href="olos-sampler.css">
   <template>
-    <link rel="stylesheet" href="olos-sampler.css"></link>
 
-    <paper-dropdown-menu label="Sample Packs" on-click="{{buffersChanged}}">
-      <core-dropdown class="dropdown constrained-height">
-        <core-menu>
+    <div class="controls">
+      <paper-dropdown-menu selected="0" label="Sample Pack" class="dropdown-trigger">
+          <paper-menu class="dropdown-content">
+            <template id="sample-pack-dropdown" is="dom-repeat" items="[[samplePacks]]" as="pack">
+              <paper-item label$="{{pack.name}}" data-count$="{{index}}" on-click="toggleSamplePack">{{pack.name}}</paper-item>
+            </template>
+          </paper-menu>
+      </paper-dropdown-menu>
 
-          <template repeat="{{pack in samplePackKeys}}">
-            <core-item on-click="{{toggleSamplePack}}">{{pack}}</core-item>
-          </template>
+      <paper-input label="pitchshift" type="number" id="pitch" min="-12" max="12" step="1" value="{{pitch::input}}" style="width:30%"></paper-input>
+    </div>
 
-        </core-menu>
+    <!-- <div style="height:100%" id="olos-container"> -->
 
-      </core-dropdown>
-    </paper-dropdown-menu>
-
-    <label>Pitch: </label>
-    <input type="number" is="core-input" id="pitch" min="-12" max="12" step="1"value="{{pitch}}" style="width:40px"></input>
-
-
-    <div style="height:100%" id="olos-container">
-
-      <template repeat="{{s in samples}}">
-        <olos-soundfile src="{{s}}"></olos-soundfile>
+      <template is="dom-repeat" items="{{samples}}" as="s">
+        <olos-soundfile waveformheight="50px" class="sampler" name="{{inverseIndex(index, samples)}}" style="width:100%; height:100px; position:relative;" src="{{s}}"></olos-soundfile></label>
       </template>
 
       <olos-param id="triggerParam"></olos-param>
 
-    </div>
+    <!-- </div> -->
 
   </template>
   <script>
-    (function(params){
+    (function (params) {
+      Polymer({
+        is: 'olos-sampler',
+        properties: {
+          /**
+           *  Output GainNode
+           *
+           *  @property output
+           *  @type GainNode
+           */
+          output: {
+            value: null,
+            notify: true
+          },
+          /**
+           *  Global pitch-shift, in semitones, which is converted to playback rate
+           *  and applied to all soundfiles (taking into account their individual pitch
+           *  offsets)
+           *
+           *  @property pitch
+           *  @type Number
+           *  @default 0
+           */
+          pitch: {
+            type: Number,
+            value: 0,
+            observer: 'pitchChanged'
+          },
+          /**
+           *  Individual pitch offsets specific to each soundfile
+           *  @type Object
+           */
+          pitchOffsets: { observer: 'pitchOffsetsChanged' },
+          publicMethods: {
+            type: Array,
+            value: function () {
+              return [
+                'pitchOffsets',
+                'settings'
+              ];
+            }
+          },
+          samplePacks: {
+            type: Array,
+            value: function() {
+                return [
+                {
+                  name: 'drums',
+                  samplePaths: [
+                  '../_audio/tom_01.mp3',
+                  '../_audio/triangle_01.mp3',
+                  '../_audio/triangle_03.mp3',
+                  '../_audio/707/Snare-707.mp3',
+                  '../_audio/707/Kick-707.mp3'
+                ]},
+                {
+                  name: '808',
+                  samplePaths: [
+                  '../_audio/808/Clave_808.mp3',
+                  '../_audio/808/CH.mp3',
+                  '../_audio/808/CY1025.mp3',
+                  '../_audio/808/SD1010.mp3',
+                  '../_audio/808/BD2510.mp3'
+                ]},
 
-      Polymer('olos-sampler', {
+                {
+                  name: 'watery',
+                  samplePaths: [
+                  '../_audio/watery/water_droplet_2.mp3',
+                  '../_audio/watery/water_droplet_3.mp3',
+                  '../_audio/watery/waterbowl1.mp3',
+                  '../_audio/watery/waterbowl2.mp3',
+                  '../_audio/watery/waterbottle1.mp3'
+                ]},
+                {
+                  name: 'meloding',
+                  samplePaths: [
+                  '../_audio/marimba/C3.mp3',
+                  '../_audio/whistle.mp3',
+                  '../_audio/flute.mp3',
+                  '../_audio/doorbell.mp3',
+                  '../_audio/dink_04.mp3'
+                ]},
+                {
+                  name: 'marimba',
+                  samplePaths: [
+                  '../_audio/marimba/A3.mp3',
+                  '../_audio/marimba/C3.mp3',
+                  '../_audio/marimba/E3.mp3',
+                  '../_audio/marimba/G3.mp3',
+                  '../_audio/marimba/Bb3.mp3'
+                ]},
+                {
+                  'name': 'lissajous',
+                  'samplePaths': [
+                  '../_audio/design/json1.mp3',
+                  '../_audio/design/json2.mp3',
+                  '../_audio/Lissajous_Samples/Loops/Boops.mp3',
+                  '../_audio/Lissajous_Samples/Loops/Chords.mp3',
+                  '../_audio/Lissajous_Samples/Loops/Pad.mp3'
+                ]},
+                {
+                  'name': 'vocal',
+                  'samplePaths': [
+                  '../_audio/vocal/badabap1.mp3',
+                  '../_audio/vocal/badabap5.mp3',
+                  '../_audio/vocal/bv4.mp3',
+                  '../_audio/vocal/heynowmidh1.mp3',
+                  '../_audio/vocal/op051.mp3'
+                ]}
+              ];
+            }
+          },
 
-        /**
-         *  triggerParam contains the input data passed by another module.
-         *  
-         *  @property triggerParam
-         *  @type Object
-         *  @default ''
-         */
-        triggerParam: null,
-
-        /**
-         *  Output GainNode
-         *
-         *  @property output
-         *  @type GainNode
-         */
-        output: null,
-
-        /**
-         *  pitch-shift, which is converted to playback rate, relative to zero (root)
-         *
-         *  @property pitch
-         *  @type Number
-         *  @default 0
-         */
-        pitch: 0,
-
-        samplePackKeys: [],
-
-        samplePacks: {
-
-          'drums' : ['../_audio/tom_01.mp3', '../_audio/triangle_01.mp3', '../_audio/triangle_03.mp3', '../_audio/707/Snare-707.mp3', '../_audio/707/Kick-707.mp3'],
-
-          'watery' : ['../_audio/watery/water_droplet_2.mp3', '../_audio/watery/water_droplet_3.mp3', '../_audio/watery/waterbowl1.mp3','../_audio/watery/waterbowl2.mp3','../_audio/watery/waterbottle1.mp3'],
-
-          'meloding' : ['../_audio/marimba/C3.mp3', '../_audio/whistle.mp3', '../_audio/flute.mp3', '../_audio/doorbell.mp3', '../_audio/dink_04.mp3'],
-
-          'lissaJ' : ['../_audio/design/json1.mp3', '../_audio/design/json2.mp3', '../_audio/Lissajous_Samples/Loops/Boops.mp3', '../_audio/Lissajous_Samples/Loops/Chords.mp3', '../_audio/Lissajous_Samples/Loops/Pad.mp3'],
-
-          'vocal' : ['../_audio/vocal/badabap1.mp3', '../_audio/vocal/badabap5.mp3', '../_audio/vocal/bv4.mp3', '../_audio/vocal/heynowmidh1.mp3', '../_audio/vocal/op051.mp3']
-
+          // determines how many soundfiles there are
+          samples: {
+            type: Array,
+            value: function () {
+              return [
+                '../_audio/tom_01.mp3',
+                '../_audio/triangle_01.mp3',
+                '../_audio/triangle_03.mp3',
+                '../_audio/707/Snare-707.mp3',
+                '../_audio/707/Kick-707.mp3'
+              ];
+            },
+            observer: 'samplesChanged'
+          },
+          /**
+           *  An Array of olos-soundfiles
+           *  
+           *  @property soundfiles
+           *  @type {Array}
+           */
+          soundfiles: {
+            type: Array,
+            value: function () {
+              return [];
+            }
+          },
+          /**
+           *  triggerParam contains the input data passed by another module.
+           *
+           *  For example, connect a matrix to the triggerParam to trigger
+           *  soundfiles.
+           *  
+           *  @property triggerParam
+           *  @type Object
+           *  @default ''
+           */
+          triggerParam: {
+            value: null,
+            notify: true
+          }
         },
-
-        // determines how many soundfiles there are
-        samples: ['../_audio/tom_01.mp3', '../_audio/triangle_01.mp3', '../_audio/triangle_03.mp3', '../_audio/707/Snare-707.mp3', '../_audio/707/Kick-707.mp3'],
-
-
-        rootfolder: '../olos-sampler/',
-
-        publicMethods: ['pitchOffsets', 'settings'],
-
-        /**
-         *  An Array of olos-soundfiles
-         *  
-         *  @property soundfiles
-         *  @type {Array}
-         */
-        soundfiles: [],
-        canvasDivs: [],
-
         ready: function() {
           this.output = audioContext.createGain();
 
-          this.samplePackKeys = Object.keys(this.samplePacks);
+          window.smp = this;
         },
-
-        domReady: function() {
-          var self = this;
-          self._setupCanvases();
-          self._initParams();
-        },
-
-        _initParams: function() {
+        attached: function() {
           var self = this;
 
+          // not sure why this is necessary
+          setTimeout(function() {
+            self._setupCanvases();
+            self._initParams();
+            self.samplesChanged();
+          }, 200);
+        },
+        _initParams: function () {
+          var self = this;
           self.triggerParam = self.$.triggerParam;
           self.triggerParam.scope = self;
-          self.triggerParam.callback = self.onData;
+          self.triggerParam.callback = function(a, b) {
+            self.onData(a, b);
+          };
         },
+        _setupCanvases: function () {
+          var nodeList = this.querySelectorAll('olos-soundfile');
 
-        _setupCanvases: function() {
-          var nodeList = this.shadowRoot.querySelectorAll('olos-soundfile');
-          
-          console.log('node list' + nodeList);
+          // Will hold the array
+          var soundfiles = [].slice.call(nodeList);
 
-          var soundfiles = []; // Will hold the array
-          for(var i = 0, ll = nodeList.length; i != ll; soundfiles.push(nodeList[i++]));
-
+          // soundfiles.reverse();
           this.soundfiles = soundfiles;
-          soundfiles.reverse();
-
-          this.canvasDivs = [];
 
           // add each soundfile canvas to the page
           for (var i = 0; i < this.soundfiles.length; i++) {
-            this.soundfiles[i].$.controls.hidden = true;
+            // this.set('soundfiles' + ('.' + i) + '.$' + '.controls' + '.hidden', true);
             this.soundfiles[i].output.connect(this.output);
+            this.set('soundfiles' + ('.' + i) + '.pitchOffset', 0);
 
-            this.soundfiles[i].pitchOffset = 0;
           }
-
         },
-
-        toggleSamplePack: function(e, select, target) {
-          var samplePackName = target.innerHTML;
-          this.samples = this.samplePacks[samplePackName];
+        toggleSamplePack: function (e) {
+          var samplePackName = e.target.getAttribute('label');
+          var sampleIndex = e.target.dataset.count;
+          var samples = this.samplePacks[sampleIndex].samplePaths;
+          this.samples = samples;
         },
-
-        samplesChanged: function() {
+        samplesChanged: function () {
           var self = this;
+          if (!this.soundfiles) return;
 
-          for (var i = 0; i < this.soundfiles.length; i++) {
-            try {
-              this.soundfiles[i].dispose();
-            } catch(e) {
-              throw e;
+          console.log('samples changed');
+          for (var i = 0; i < this.samples.length; i++) {
+            if (this.soundfiles[i]) {
+              var smp = this.samples[i];
+              console.log(smp);
+              var filePath = this.soundfiles[i].resolveUrl(smp);
+              this.soundfiles[i]._resetBuffer( filePath );
+            } else {
+              console.log('too many buffers, not enough soundfiles in the sampler');
             }
           }
-
-          self.soundfiles = [];
-          self.canvasDivs = [];
-
-          setTimeout( function() {
-            self._setupCanvases()
-          }, 100);
         },
-
+        // samplePackKeysChanged: function() {
+        //   console.log('sample pack keys changed');
+        // },
+        // getKey: function(pack) {
+        //   return Object.keys(pack)[0];
+        // },
         /**
          *  A method to play with settings.
          *
@@ -195,42 +286,44 @@ olos-sampler
          *  @param {Number} this.pitch change all soundfile playback rates
          *                             by a pitch ratio
          */
-        settings: function() {
-          // this.pitch = 0;
-          // this.reverseBuffers();
+        settings: function () {
         },
-
+        // this.pitch = 0;
+        // this.reverseBuffers();
         /**
          *  Change individual pitch offsets.
          *
          *  @method pitchOffset
          */
-        pitchOffsets: function() {
+        pitchOffsets: function () {
           // change individual soundfile pitch offset
-          this.soundfiles[0].pitchOffset = -12;
+          this.set('soundfiles' + ('.' + 0) + '.pitchOffset', -12);
         },
-
-        pitchOffsetsChanged: function() {
+        pitchOffsetsChanged: function () {
           this.pitchChanged();
         },
+        pitchChanged: function () {
+          if (!this.soundfiles) return;
+          console.log('pitch changed');
 
-        pitchChanged: function() {
           for (var i = 0; i < this.soundfiles.length; i++) {
-            this.soundfiles[i].pitch = this.pitch + this.soundfiles[i].pitchOffset;
+            var semitones = Number(this.pitch) + Number(this.soundfiles[i].pitchOffset);
+            this.soundfiles[i].semitones = semitones;
           }
         },
-
         /**
          *  reverse all of the buffers
          *
          *  @method reverseBuffers
          */
-        reverseBuffers: function() {
+        reverseBuffers: function () {
           for (var i = 0; i < this.soundfiles.length; i++) {
             this.soundfiles[i].reverseBuffer();
           }
         },
-
+        inverseIndex: function(index, samples) {
+          return samples.length - index - 1;
+        },
         /**
          *  This event fires when new data is received.
          *
@@ -238,14 +331,15 @@ olos-sampler
          *  @param  Array value an array of values
          *  @param  Number time audioContext time
          */
-        onData: function(value, time) {
-          for (var i = 0; i < value.length; i++) {
-            if (value[i] > 0) {
+        onData: function (values, time) {
+          var values = arguments[0];
+          var time = arguments[1];
 
+          for (var i = 0; i < this.soundfiles.length; i++) {
+            if (values[i] > 0) {
               // make a fade in and out if there is a selection
               var cueStart = this.soundfiles[i].cueStart;
               var cueDur = this.soundfiles[i].cueDur;
-
               // if (cueStart) {
               //   this.soundfiles[i].output.gain.cancelScheduledValues(time + 0);
               //   this.soundfiles[i].output.gain.setValueAtTime(this.soundfiles[i].output.gain.value, time);
@@ -255,45 +349,32 @@ olos-sampler
               // if (cueDur) {
               //   this.soundfiles[i].output.gain.setTargetAtTime(0, cueDur + time - 0.1, 0.5);
               // }
-
               this.soundfiles[i].start(time - audioContext.currentTime);
-
-
             }
           }
         },
-
-
-        _draw: function() {
+        _draw: function () {
           // tell all soundfiles to draw
           for (var i = 0; i < this.soundfiles.length; i++) {
             this.soundfiles[i]._draw();
           }
         },
-
         // dispose
-        dispose: function() {
+        dispose: function () {
           // dispose of all soundfiles
           for (var i = 0; i < this.soundfiles.length; i++) {
             this.soundfiles[i].dispose();
           }
         },
-
-        resize: function(e) {
-
-          var w  = this.getBoundingClientRect().width;
-          var h = this.getBoundingClientRect().height/this.soundfiles.length - 2.5;
-
+        resize: function (e) {
+          var w = this.getBoundingClientRect().width;
+          var h = this.getBoundingClientRect().height / this.soundfiles.length - 2.5;
           // // resize all olos-soundfiles
           for (var i = 0; i < this.soundfiles.length; i++) {
-            this.soundfiles[i]._p5.resizeCanvas(w,h);
+            this.soundfiles[i]._p5.resizeCanvas(w, h);
           }
-
         }
-
       });
-
-    })();
+    }());
   </script>
-
-</polymer-element>
+</dom-module>

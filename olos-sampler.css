@@ -3,3 +3,33 @@
   color: green;
   font-family: 'RobotoDraft', sans-serif;
 }
+
+.sf-container {
+	width:100%;
+	height:30px;
+}
+
+.controls {
+	display: inline-block;
+}
+
+.controls > {
+	max-width:50%;
+	padding:0px 5px;
+}
+
+paper-dropdown-menu {
+	width: 65%;
+	display: inline-block;
+	float: left;
+}
+
+paper-input {
+	float: left;
+	display: inline-block;
+	padding-left:10px;
+}
+
+canvas {
+  visibility: visible !important;
+}

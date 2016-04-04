@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <title>olos-sampler Demo</title>
+
+  <script src="../../webcomponentsjs/webcomponents.min.js"></script>
+  <script src="../../p5js/p5.js"></script>
+  <script src="../../p5js/p5.sound.js"></script>
+
+  <script>
+    audioContext = p5.prototype.getAudioContext();
+
+    // window.onload = function() {
+    //   var elem = document.querySelector('olos-soundfile');
+    //   elem.toMaster();
+
+    //   function draw() {
+    //     window.requestAnimationFrame(function() {
+    //       elem._draw()
+    //       window.requestAnimationFrame(draw);
+    //     });
+    //   }
+
+    //   draw();
+    // }
+
+  </script>
+
+  <link rel="import" href="../olos-sampler.html">
+
+</head>
+<body unresolved>
+
+<olos-sampler style="width:600px;"></olos-sampler>
+</body>
+</html>
